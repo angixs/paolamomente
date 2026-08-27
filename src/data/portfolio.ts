@@ -2,8 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, parse } from 'node:path';
 
 const photoRoot = join(process.cwd(), 'public', 'photo');
-const portfolioFolders = ['dipinti', 'disegni'] as const;
-const imageExtensions = new Set(['.webp']);
+const imageExtensions = new Set(['.avif', '.jpeg', '.jpg', '.png', '.webp']);
 
 const sectionSummaries: Record<string, string> = {
 	dipinti: 'Tele e opere pittoriche dove materia, colore e gesto costruiscono paesaggi interiori.',
@@ -58,11 +57,14 @@ const readArtworkInfo = (folder: string) => {
 		}, new Map<string, string[]>());
 };
 
+const portfolioFolders = existsSync(photoRoot)
+	? readdirSync(photoRoot, { withFileTypes: true })
+			.filter((item) => item.isDirectory())
+			.map((item) => item.name)
+			.sort((a, b) => a.localeCompare(b, 'it', { numeric: true }))
+	: [];
+
 export const portfolioSections = portfolioFolders
-	.filter((folder) => {
-		const folderPath = join(photoRoot, folder);
-		return existsSync(folderPath) && statSync(folderPath).isDirectory();
-	})
 	.map((folder) => {
 		const artworkInfo = readArtworkInfo(folder);
 		const artworks = readdirSync(join(photoRoot, folder))
