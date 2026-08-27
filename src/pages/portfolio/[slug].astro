@@ -1,0 +1,450 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { portfolioSections } from '../../data/portfolio';
+
+export function getStaticPaths() {
+	return portfolioSections.map((section) => ({
+		params: { slug: section.slug },
+		props: { section },
+	}));
+}
+
+const { section } = Astro.props;
+---
+
+<Layout title={`${section.title} | Paola Momentè`} description={section.summary}>
+	<header class="page-hero">
+		<div class="page-hero__content">
+			<p>portfolio</p>
+			<h1>{section.title}</h1>
+			<span>{section.summary}</span>
+			<nav class="portfolio-nav" aria-label="Sezioni portfolio">
+				{
+					portfolioSections.map((item) => (
+						<a
+							href={`/portfolio/${item.slug}/`}
+							aria-current={item.slug === section.slug ? 'page' : undefined}
+						>
+							{item.title}
+						</a>
+					))
+				}
+			</nav>
+		</div>
+	</header>
+
+	<main class="portfolio-page">
+		<section class="works" aria-labelledby="works-title">
+			<div>
+				<p>quadri</p>
+				<h2 id="works-title">Opere</h2>
+			</div>
+
+			<div class="works__grid">
+				{
+					section.artworks.map((artwork) => (
+						<article class="work-card">
+							<button
+								class="work-card__preview"
+								type="button"
+								data-artwork-open
+								data-artwork-image={artwork.image}
+								data-artwork-title={artwork.title}
+								data-artwork-info={JSON.stringify(artwork.info)}
+								aria-label={`Apri dettagli di ${artwork.title}`}
+							>
+								<img src={artwork.image} alt={`Quadro ${artwork.title} di Paola Momentè`} loading="lazy" />
+								<span class="work-card__caption">
+									<span>{artwork.title}</span>
+								</span>
+							</button>
+						</article>
+					))
+				}
+			</div>
+		</section>
+	</main>
+
+	<dialog class="artwork-dialog" id="artwork-dialog" aria-labelledby="artwork-dialog-title">
+		<button class="artwork-dialog__close" type="button" aria-label="Chiudi immagine">Chiudi</button>
+		<figure>
+			<img src="" alt="" id="artwork-dialog-image" />
+			<figcaption class="artwork-dialog__content">
+				<h2 id="artwork-dialog-title"></h2>
+				<ul class="artwork-dialog__info" id="artwork-dialog-info"></ul>
+				<p class="artwork-dialog__empty" id="artwork-dialog-empty" hidden>
+					Informazioni non disponibili.
+				</p>
+			</figcaption>
+		</figure>
+	</dialog>
+</Layout>
+
+<script>
+	const dialog = document.querySelector<HTMLDialogElement>('#artwork-dialog');
+	const dialogImage = document.querySelector<HTMLImageElement>('#artwork-dialog-image');
+	const dialogTitle = document.querySelector<HTMLElement>('#artwork-dialog-title');
+	const dialogInfo = document.querySelector<HTMLUListElement>('#artwork-dialog-info');
+	const dialogEmpty = document.querySelector<HTMLElement>('#artwork-dialog-empty');
+	const closeButton = document.querySelector<HTMLButtonElement>('.artwork-dialog__close');
+
+	const parseArtworkInfo = (rawInfo: string | undefined) => {
+		if (!rawInfo) {
+			return [];
+		}
+
+		try {
+			const parsedInfo = JSON.parse(rawInfo);
+			return Array.isArray(parsedInfo) ? parsedInfo.filter((item) => typeof item === 'string') : [];
+		} catch {
+			return [];
+		}
+	};
+
+	document.querySelectorAll<HTMLButtonElement>('[data-artwork-open]').forEach((button) => {
+		button.addEventListener('click', () => {
+			const image = button.dataset.artworkImage;
+			const title = button.dataset.artworkTitle;
+			const info = parseArtworkInfo(button.dataset.artworkInfo);
+
+			if (!dialog || !dialogImage || !dialogTitle || !dialogInfo || !dialogEmpty || !image || !title) {
+				return;
+			}
+
+			dialogImage.src = image;
+			dialogImage.alt = `Quadro ${title} di Paola Momentè`;
+			dialogTitle.textContent = title;
+			dialogInfo.replaceChildren();
+
+			info.forEach((detail) => {
+				const item = document.createElement('li');
+				item.textContent = detail;
+				dialogInfo.append(item);
+			});
+
+			dialogInfo.hidden = info.length === 0;
+			dialogEmpty.hidden = info.length > 0;
+
+			if (typeof dialog.showModal === 'function') {
+				dialog.showModal();
+			} else {
+				dialog.setAttribute('open', '');
+			}
+		});
+	});
+
+	closeButton?.addEventListener('click', () => {
+		dialog?.close();
+	});
+
+	dialog?.addEventListener('click', (event) => {
+		if (event.target === dialog) {
+			dialog.close();
+		}
+	});
+</script>
+
+<style>
+	.page-hero,
+	.portfolio-page {
+		width: min(1180px, calc(100% - 40px));
+		margin: 0 auto;
+	}
+
+	.page-hero {
+		display: grid;
+		min-height: 34svh;
+		padding: 24px 0 34px;
+		place-items: center;
+	}
+
+	.page-hero__content {
+		display: grid;
+		place-items: center;
+		text-align: center;
+	}
+
+	.portfolio-nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		justify-content: center;
+		margin-top: 28px;
+	}
+
+	.portfolio-nav a {
+		display: inline-flex;
+		align-items: center;
+		min-height: 38px;
+		padding: 8px 14px;
+		border: 1px solid rgba(35, 31, 27, 0.14);
+		border-radius: 999px;
+		background: rgba(255, 252, 247, 0.64);
+		color: #3a322b;
+		font-size: 0.9rem;
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.portfolio-nav a:hover,
+	.portfolio-nav a:focus-visible,
+	.portfolio-nav a[aria-current="page"] {
+		border-color: rgba(126, 83, 57, 0.45);
+		color: #7b4f35;
+	}
+
+	.portfolio-nav a[aria-current="page"] {
+		background: #fffaf4;
+	}
+
+	.page-hero p,
+	.works > div > p {
+		margin: 0 0 14px;
+		color: #7f6b5d;
+		font-size: 0.78rem;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+	}
+
+	h1,
+	h2,
+	h3,
+	p {
+		margin-top: 0;
+	}
+
+	h1,
+	h2 {
+		font-family: Georgia, "Times New Roman", serif;
+		font-weight: 400;
+		letter-spacing: 0;
+	}
+
+	h1 {
+		max-width: 900px;
+		margin-bottom: 16px;
+		font-size: clamp(2.35rem, 6vw, 5rem);
+		line-height: 1.02;
+	}
+
+	.page-hero span {
+		display: block;
+		max-width: 660px;
+		color: #514940;
+		font-size: 1.12rem;
+	}
+
+	.works {
+		padding: 24px 0 64px;
+	}
+
+	h2 {
+		margin-bottom: 0;
+		font-size: clamp(1.9rem, 3vw, 3rem);
+		line-height: 1;
+	}
+
+	.works__grid {
+		columns: 3 260px;
+		column-gap: 18px;
+		margin-top: 24px;
+	}
+
+	.work-card {
+		display: inline-block;
+		width: 100%;
+		margin: 0 0 18px;
+		overflow: hidden;
+		border-radius: 8px;
+		background: transparent;
+		break-inside: avoid;
+	}
+
+	.work-card__preview {
+		position: relative;
+		display: block;
+		width: 100%;
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
+		border: 0;
+		border-radius: 8px;
+		background: transparent;
+		color: inherit;
+		cursor: zoom-in;
+		font: inherit;
+		text-align: left;
+	}
+
+	.work-card__preview:focus-visible {
+		outline: 3px solid rgba(123, 79, 53, 0.46);
+		outline-offset: 3px;
+	}
+
+	.work-card__preview img {
+		width: 100%;
+		height: auto;
+		object-fit: initial;
+		border-radius: 8px;
+		background: #efe9df;
+		transition: transform 220ms ease;
+	}
+
+	.work-card__preview:hover img,
+	.work-card__preview:focus-visible img {
+		transform: scale(1.015);
+	}
+
+	.work-card__caption {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		padding: 34px 14px 13px;
+		background: linear-gradient(180deg, rgba(18, 17, 15, 0), rgba(18, 17, 15, 0.68));
+	}
+
+	.work-card__caption span {
+		color: #fffaf2;
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: 1.18rem;
+		font-weight: 400;
+		line-height: 1.2;
+		text-shadow: 0 2px 12px rgba(0, 0, 0, 0.38);
+	}
+
+	.artwork-dialog {
+		position: fixed;
+		inset: 0;
+		z-index: 60;
+		width: min(100vw - 32px, 1320px);
+		max-width: none;
+		height: min(100svh - 32px, 920px);
+		max-height: none;
+		margin: auto;
+		padding: 0;
+		overflow: hidden;
+		border: 0;
+		border-radius: 8px;
+		background: #12110f;
+		color: #fffaf2;
+		box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+	}
+
+	.artwork-dialog::backdrop {
+		background: rgba(18, 17, 15, 0.72);
+		backdrop-filter: blur(8px);
+	}
+
+	.artwork-dialog figure {
+		display: grid;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		grid-template-rows: minmax(0, 1fr) auto;
+	}
+
+	.artwork-dialog img {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		background: #12110f;
+	}
+
+	.artwork-dialog__content {
+		padding: 16px 56px 18px 18px;
+		background: #171512;
+	}
+
+	.artwork-dialog__content h2 {
+		margin: 0 0 10px;
+		font-family: Georgia, "Times New Roman", serif;
+		font-size: clamp(1.22rem, 2vw, 1.7rem);
+		font-weight: 400;
+		line-height: 1.2;
+	}
+
+	.artwork-dialog__info,
+	.artwork-dialog__empty {
+		margin: 0;
+		color: rgba(255, 250, 242, 0.78);
+		font-size: 0.96rem;
+	}
+
+	.artwork-dialog__info {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px 18px;
+		padding: 0;
+		list-style: none;
+	}
+
+	.artwork-dialog__info li {
+		position: relative;
+		padding-left: 14px;
+	}
+
+	.artwork-dialog__info li::before {
+		position: absolute;
+		top: 0.68em;
+		left: 0;
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: rgba(255, 250, 242, 0.62);
+		content: "";
+		transform: translateY(-50%);
+	}
+
+	.artwork-dialog__close {
+		position: absolute;
+		z-index: 1;
+		top: 14px;
+		right: 14px;
+		min-height: 38px;
+		padding: 8px 12px;
+		border: 1px solid rgba(255, 250, 242, 0.28);
+		border-radius: 6px;
+		background: rgba(18, 17, 15, 0.58);
+		color: #fffaf2;
+		cursor: pointer;
+		font: inherit;
+		font-size: 0.84rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.artwork-dialog__close:hover,
+	.artwork-dialog__close:focus-visible {
+		background: rgba(255, 250, 242, 0.16);
+	}
+
+	@media (max-width: 760px) {
+		.page-hero,
+		.portfolio-page {
+			width: min(100% - 28px, 680px);
+		}
+
+		.page-hero {
+			min-height: 32svh;
+			padding-top: 20px;
+		}
+
+		.works__grid {
+			columns: 1;
+		}
+
+		.artwork-dialog {
+			width: calc(100vw - 20px);
+			height: calc(100svh - 20px);
+		}
+	}
+
+	@media (min-width: 761px) and (max-width: 1020px) {
+		.works__grid {
+			columns: 2;
+		}
+	}
+</style>
